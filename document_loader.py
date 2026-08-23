@@ -1,7 +1,7 @@
 """Carrega e processa documentos de conciliação bancária."""
 import os
-from typing import List, Dict, Tuple
-from langchain.schema import Document
+from typing import List, Tuple
+from langchain_core.documents import Document
 from langchain_community.document_loaders import PyPDFLoader
 import pandas as pd
 
@@ -56,7 +56,6 @@ def load_extrato_bancario(file_path: str) -> Tuple[pd.DataFrame, List[Document]]
     df = pd.read_csv(file_path)
     df.columns = [c.strip().lower() for c in df.columns]
 
-    # Normaliza nomes de colunas comuns
     col_map = {}
     for col in df.columns:
         lc = col.lower().strip()
@@ -73,15 +72,12 @@ def load_extrato_bancario(file_path: str) -> Tuple[pd.DataFrame, List[Document]]
 
     df = df.rename(columns=col_map)
 
-    # Converte data
     if "data" in df.columns:
         df["data"] = pd.to_datetime(df["data"], dayfirst=True, errors="coerce")
 
-    # Converte valor
     if "valor" in df.columns:
         df["valor"] = df["valor"].astype(str).str.replace("R$", "").str.replace(".", "").str.replace(",", ".").astype(float)
 
-    # Converte tipo para padronização
     if "tipo" in df.columns:
         df["tipo"] = df["tipo"].astype(str).str.strip().str.upper()
         df["tipo"] = df["tipo"].replace({

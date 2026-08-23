@@ -2,21 +2,19 @@
 import os
 from typing import List, Optional
 
-from langchain.schema import Document
+from langchain_core.documents import Document
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.chains import RetrievalQA
-from langchain.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate
 
-# Configurações
 CHROMA_PERSIST_DIR = "./chroma_db"
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 LLM_MODEL = "gemini-1.5-flash"
 
 
 def _get_api_key() -> str:
-    """Obtém a API Key de múltiplas fontes."""
     try:
         import streamlit as st
         key = st.secrets.get("GOOGLE_API_KEY")
