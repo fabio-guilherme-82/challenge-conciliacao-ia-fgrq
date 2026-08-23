@@ -1,13 +1,9 @@
-"""Agente RAG para conciliacao bancaria usando Google Embeddings + ChromaDB."""
+"""Agente RAG para conciliacao bancaria usando Gemini direto + ChromaDB."""
 import os
 from typing import List, Dict, Any
 
-from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_community.vectorstores import Chroma
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain.chains import create_retrieval_chain
-from langchain.chains.combine_documents import create_stuff_documents_chain
-from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.documents import Document
 
 CHROMA_PATH = "./chroma_db"
@@ -47,12 +43,8 @@ def build_vector_store(documents: List[Document]):
         google_api_key=api_key
     )
 
-    # Faz chunking dos documentos para melhor recuperacao
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-    chunks = text_splitter.split_documents(documents)
-
     vectorstore = Chroma.from_documents(
-        documents=chunks,
+        documents=documents,
         embedding=embeddings,
         persist_directory=CHROMA_PATH
     )
@@ -75,42 +67,41 @@ def load_existing_vector_store():
 
 
 def ask_question(question: str, resumo_conciliacao: str = "") -> Dict[str, Any]:
-    """Faz uma pergunta ao agente RAG."""
+    """Faz uma pergunta ao agente RAG usando Gemini API direta."""
+    import google.generativeai as genai
+
     vectorstore = load_existing_vector_store()
     if vectorstore is None:
         raise ValueError("Nenhum documento carregado. Faca upload dos arquivos primeiro.")
 
     api_key = _get_api_key()
 
-    llm = ChatGoogleGenerativeAI(
-        model=LLM_MODEL,
-        google_api_key=api_key,
-        temperature=0.1,
-        max_output_tokens=2048
+    # 1. Busca documentos relevantes no ChromaDB
+    retriever = vectorstore.as_retriever(search_kwargs={"k": 8})
+    docs_relevantes = retriever.invoke(question)
+
+    # 2. Monta o contexto
+    contexto = "\n\n".join([doc.page_content for doc in docs_relevantes])
+
+    # 3. Monta o prompt
+    prompt = (
+        "Voce e um assistente contabil especializado em conciliacao bancaria. "
+        "Responda em portugues, com valores em R$. "
+        "Se nao souber a resposta, diga que nao encontrou nos documentos. "
+        "\n\nRESUMO DA CONCILIACAO:\n"
+        + (resumo_conciliacao or "Nenhum resumo disponivel.") +
+        "\n\nContexto dos documentos:\n"
+        + contexto +
+        "\n\nPergunta: " + question +
+        "\n\nResposta:"
     )
 
-    retriever = vectorstore.as_retriever(search_kwargs={"k": 8})
-
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", (
-            "Voce e um assistente contabil especializado em conciliacao bancaria. "
-            "Responda em portugues, com valores em R$. "
-            "Se nao souber a resposta, diga que nao encontrou nos documentos. "
-            "\n\nRESUMO DA CONCILIACAO:\n{resumo}\n\n"
-            "Contexto dos documentos:\n{context}"
-        )),
-        ("human", "{input}")
-    ])
-
-    question_answer_chain = create_stuff_documents_chain(llm, prompt)
-    rag_chain = create_retrieval_chain(retriever, question_answer_chain)
-
-    resposta = rag_chain.invoke({
-        "input": question,
-        "resumo": resumo_conciliacao
-    })
+    # 4. Chama a API do Gemini diretamente
+    genai.configure(api_key=api_key)
+    llm = genai.GenerativeModel(LLM_MODEL)
+    response = llm.generate_content(prompt)
 
     return {
-        "answer": resposta.get("answer", ""),
-        "sources": [doc.metadata for doc in resposta.get("context", [])]
+        "answer": response.text,
+        "sources": [doc.metadata for doc in docs_relevantes]
     }

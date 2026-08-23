@@ -1,4 +1,4 @@
-"""Alura Agent — Conciliacao Bancaria com IA."""
+"""Alura Agent - Conciliacao Bancaria com IA."""
 import os
 import streamlit as st
 from dotenv import load_dotenv
@@ -7,20 +7,20 @@ from document_loader import load_extrato_bancario, load_livro_razao
 from conciliador import conciliar
 from agent import build_vector_store, ask_question
 
-# --- Configuracao da pagina ---
+# Configuracao da pagina
 st.set_page_config(
     page_title="Alura Agent | Conciliacao Bancaria",
     page_icon="🏦",
     layout="wide"
 )
 
-# --- Carrega variaveis de ambiente ---
+# Carrega variaveis de ambiente
 load_dotenv()
 api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
 if api_key:
     os.environ["GOOGLE_API_KEY"] = api_key
 
-# --- Estado da sessao ---
+# Estado da sessao
 if "docs" not in st.session_state:
     st.session_state.docs = []
 if "resumo" not in st.session_state:
@@ -28,9 +28,9 @@ if "resumo" not in st.session_state:
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
-# --- Sidebar ---
+# Sidebar
 with st.sidebar:
-    st.title("⚙️ Configuracoes")
+    st.title("Configuracoes")
     st.markdown("---")
 
     tolerancia_dias = st.slider("Tolerancia de dias", 0, 10, 3)
@@ -39,25 +39,26 @@ with st.sidebar:
 
     st.markdown("---")
     st.info("Desenvolvido para o Challenge Alura-Oracle ONE G10")
-    st.markdown("**Autor:** Fábio Guilherme")
+    st.markdown("**Autor:** Fabio Guilherme")
 
-# --- Titulo principal ---
-st.title("🏦 Alura Agent — Conciliacao Bancaria")
+# Titulo principal
+st.title("🏦 Alura Agent - Conciliacao Bancaria")
 st.markdown("Agente de IA especializado em conciliar extratos bancarios com o livro razao.")
+st.markdown("**Agora com suporte a PDF!**")
 st.markdown("---")
 
-# --- Verifica API Key ---
+# Verifica API Key
 if not api_key:
-    st.error("❌ **GOOGLE_API_KEY nao configurada!**")
+    st.error("GOOGLE_API_KEY nao configurada!")
     st.markdown("""
     Configure a chave de uma das seguintes formas:
-    1. Crie um arquivo `.env` na raiz do projeto com: `GOOGLE_API_KEY=sua_chave_aqui`
-    2. Ou configure no Streamlit Cloud em **Settings → Secrets**
+    1. Crie um arquivo `.env` na raiz do projeto com: GOOGLE_API_KEY=sua_chave_aqui
+    2. Ou configure no Streamlit Cloud em Settings -> Secrets
     """)
     st.stop()
 
-# --- Abas ---
-tab1, tab2, tab3 = st.tabs(["📤 Upload & Conciliacao", "📊 Resultados", "💬 Perguntar ao Agente"])
+# Abas
+tab1, tab2, tab3 = st.tabs(["📤 Upload e Conciliacao", "📊 Resultados", "💬 Perguntar ao Agente"])
 
 # ============================================================
 # ABA 1: UPLOAD
@@ -69,18 +70,25 @@ with tab1:
 
     with col1:
         st.subheader("Extrato Bancario")
-        extrato_file = st.file_uploader("CSV do extrato bancario", type=["csv"], key="extrato")
+        st.caption("Aceita CSV ou PDF")
+        extrato_file = st.file_uploader("Extrato bancario", type=["csv", "pdf"], key="extrato")
 
     with col2:
         st.subheader("Livro Razao")
-        razao_file = st.file_uploader("CSV do livro razao", type=["csv"], key="razao")
+        st.caption("Somente CSV")
+        razao_file = st.file_uploader("Livro razao", type=["csv"], key="razao")
 
     if extrato_file and razao_file:
-        if st.button("🚀 Executar Conciliacao", type="primary", use_container_width=True):
+        # Mostra info sobre o tipo de arquivo
+        ext_name = extrato_file.name
+        if ext_name.lower().endswith(".pdf"):
+            st.info("📄 Extrato em PDF detectado. O sistema vai extrair o texto e tentar identificar os lancamentos.")
+
+        if st.button("Executar Conciliacao", type="primary", use_container_width=True):
             with st.spinner("Processando arquivos..."):
                 try:
                     # Salva arquivos temporariamente
-                    extrato_path = "/tmp/extrato.csv"
+                    extrato_path = "/tmp/extrato" + os.path.splitext(extrato_file.name)[1]
                     razao_path = "/tmp/razao.csv"
                     with open(extrato_path, "wb") as f:
                         f.write(extrato_file.getvalue())
@@ -116,13 +124,13 @@ with tab1:
                     st.session_state["df_ext"] = df_ext
                     st.session_state["df_raz"] = df_raz
 
-                    st.success("✅ Conciliacao realizada com sucesso!")
-                    st.info(f"Taxa de conciliacao: **{len(df_conc)/len(df_ext)*100:.1f}%** | Documentos indexados: **{len(todos_docs)}**")
+                    st.success("Conciliacao realizada com sucesso!")
+                    st.info(f"Taxa de conciliacao: {len(df_conc)/len(df_ext)*100:.1f}% | Documentos indexados: {len(todos_docs)}")
 
                 except Exception as e:
                     st.error(f"Erro durante a conciliacao: {e}")
     else:
-        st.info("👆 Faca o upload dos dois arquivos CSV para iniciar.")
+        st.info("Faca o upload dos dois arquivos para iniciar.")
 
 # ============================================================
 # ABA 2: RESULTADOS
@@ -138,7 +146,7 @@ with tab2:
         st.text(st.session_state["resumo"])
 
         # Conciliados
-        st.subheader("✅ Lancamentos Conciliados")
+        st.subheader("Lancamentos Conciliados")
         if not st.session_state["df_conc"].empty:
             st.dataframe(st.session_state["df_conc"], use_container_width=True)
         else:
@@ -147,21 +155,21 @@ with tab2:
         # Nao conciliados
         col1, col2 = st.columns(2)
         with col1:
-            st.subheader("❌ Nao Conciliados — Extrato")
+            st.subheader("Nao Conciliados - Extrato")
             if not st.session_state["nao_conc_ext"].empty:
                 st.dataframe(st.session_state["nao_conc_ext"], use_container_width=True)
             else:
                 st.success("Todos os lancamentos do extrato foram conciliados!")
 
         with col2:
-            st.subheader("❌ Nao Conciliados — Razao")
+            st.subheader("Nao Conciliados - Razao")
             if not st.session_state["nao_conc_raz"].empty:
                 st.dataframe(st.session_state["nao_conc_raz"], use_container_width=True)
             else:
                 st.success("Todos os lancamentos do razao foram conciliados!")
 
         # Divergencias
-        st.subheader("⚠️ Divergencias Detectadas")
+        st.subheader("Divergencias Detectadas")
         if not st.session_state["diverg"].empty:
             st.dataframe(st.session_state["diverg"], use_container_width=True)
         else:

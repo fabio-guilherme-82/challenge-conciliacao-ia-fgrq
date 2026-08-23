@@ -1,5 +1,6 @@
 """Carrega e processa documentos de conciliacao bancaria."""
 import os
+import re
 from typing import List, Tuple
 
 from langchain_core.documents import Document
@@ -46,11 +47,90 @@ def _normalizar_dataframe(df: pd.DataFrame, tipo: str) -> pd.DataFrame:
     if "tipo" in df.columns:
         df["tipo"] = df["tipo"].astype(str).str.strip().str.upper()
         df["tipo"] = df["tipo"].replace({
-            "C": "CREDITO", "CRÉDITO": "CREDITO", "ENTRADA": "CREDITO",
-            "D": "DEBITO", "DÉBITO": "DEBITO", "SAIDA": "DEBITO", "SAÍDA": "DEBITO"
+            "C": "CREDITO", "CREDITO": "CREDITO", "ENTRADA": "CREDITO",
+            "D": "DEBITO", "DEBITO": "DEBITO", "SAIDA": "DEBITO", "SAIDA": "DEBITO"
         })
 
     return df
+
+
+def _extrair_tabela_pdf(texto: str) -> pd.DataFrame:
+    """Tenta extrair uma tabela de dados de um texto de PDF de extrato bancario."""
+    linhas = texto.split("\n")
+    registros = []
+
+    # Padroes comuns de linha de extrato: DATA | DESCRICAO | VALOR | SALDO
+    padrao = re.compile(
+        r"(\d{2}[/.-]\d{2}[/.-]\d{2,4})\s+(.+?)\s+([\d.,]+)\s+([\d.,]+)"
+    )
+
+    for linha in linhas:
+        linha = linha.strip()
+        if not linha:
+            continue
+
+        match = padrao.search(linha)
+        if match:
+            data_str, descricao, valor_str, saldo_str = match.groups()
+            # Tenta identificar se e debito ou credito pela descricao ou valor
+            tipo = "CREDITO" if "CRED" in descricao.upper() or "RECEB" in descricao.upper() else "DEBITO"
+            registros.append({
+                "data": data_str,
+                "descricao": descricao.strip(),
+                "valor": valor_str.replace(".", "").replace(",", "."),
+                "tipo": tipo,
+                "saldo": saldo_str.replace(".", "").replace(",", ".")
+            })
+
+    if registros:
+        return pd.DataFrame(registros)
+
+    # Fallback: tenta encontrar qualquer linha com data e numero
+    padrao_simples = re.compile(r"(\d{2}[/.-]\d{2}[/.-]\d{2,4})\s+(.+?)(\d+[.,]?\d*)")
+    for linha in linhas:
+        match = padrao_simples.search(linha)
+        if match:
+            data_str, descricao, valor_str = match.groups()
+            registros.append({
+                "data": data_str,
+                "descricao": descricao.strip(),
+                "valor": valor_str.replace(".", "").replace(",", "."),
+                "tipo": "",
+                "saldo": ""
+            })
+
+    return pd.DataFrame(registros) if registros else pd.DataFrame()
+
+
+def load_pdf_extrato(file_path: str) -> Tuple[pd.DataFrame, List[Document]]:
+    """Carrega um PDF de extrato bancario e retorna DataFrame + Documentos."""
+    from pypdf import PdfReader
+
+    reader = PdfReader(file_path)
+    texto_completo = ""
+    for page in reader.pages:
+        texto_completo += page.extract_text() or ""
+
+    # Cria documentos para o RAG
+    doc = Document(
+        page_content=texto_completo,
+        metadata={
+            "source_type": "pdf",
+            "doc_type": "extrato_bancario",
+            "file_name": os.path.basename(file_path)
+        }
+    )
+    docs = [doc]
+
+    # Tenta extrair tabela estruturada
+    df = _extrair_tabela_pdf(texto_completo)
+    if df.empty:
+        # Se nao conseguiu extrair tabela, cria um DataFrame vazio
+        df = pd.DataFrame(columns=["data", "descricao", "valor", "tipo", "saldo"])
+    else:
+        df = _normalizar_dataframe(df, "extrato")
+
+    return df, docs
 
 
 def csv_para_documentos(file_path: str, doc_type: str) -> List[Document]:
@@ -79,11 +159,16 @@ def csv_para_documentos(file_path: str, doc_type: str) -> List[Document]:
 
 
 def load_extrato_bancario(file_path: str) -> Tuple[pd.DataFrame, List[Document]]:
-    """Carrega extrato bancario e retorna DataFrame + Documentos."""
-    df = pd.read_csv(file_path)
-    df = _normalizar_dataframe(df, "extrato")
-    docs = csv_para_documentos(file_path, "extrato_bancario")
-    return df, docs
+    """Carrega extrato bancario (CSV ou PDF) e retorna DataFrame + Documentos."""
+    ext = os.path.splitext(file_path)[1].lower()
+
+    if ext == ".pdf":
+        return load_pdf_extrato(file_path)
+    else:
+        df = pd.read_csv(file_path)
+        df = _normalizar_dataframe(df, "extrato")
+        docs = csv_para_documentos(file_path, "extrato_bancario")
+        return df, docs
 
 
 def load_livro_razao(file_path: str) -> Tuple[pd.DataFrame, List[Document]]:

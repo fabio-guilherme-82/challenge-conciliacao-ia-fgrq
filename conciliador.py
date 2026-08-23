@@ -1,4 +1,4 @@
-"""Lógica de conciliacao bancaria: matching e deteccao de divergencias."""
+"""Logica de conciliacao bancaria: matching e deteccao de divergencias."""
 import pandas as pd
 from difflib import SequenceMatcher
 from typing import List, Dict, Any, Tuple
@@ -20,7 +20,7 @@ def conciliar(
 ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, str]:
     """
     Executa a conciliacao entre extrato e razao.
-    Retorna: (conciliados, nao_conciliados_extrato, nao_conciliados_razao, divergencias, resumo_texto)
+    Retorna: (conciliados, nao_conc_extrato, nao_conc_razao, divergencias, resumo_texto)
     """
     conciliados = []
     usados_extrato = set()
@@ -43,12 +43,13 @@ def conciliar(
 
             # 3. Data dentro da tolerancia
             data_ok = False
+            diff_dias = None
             if pd.notna(ext.get("data")) and pd.notna(raz.get("data")):
                 diff_dias = abs((ext["data"] - raz["data"]).days)
                 if diff_dias <= tolerancia_dias:
                     data_ok = True
             else:
-                data_ok = True  # Se nao houver data, ignora este criterio
+                data_ok = True
 
             if not data_ok:
                 continue
@@ -73,7 +74,7 @@ def conciliar(
                 "raz_tipo": raz.get("tipo"),
                 "raz_conta": raz.get("conta"),
                 "raz_documento": raz.get("documento"),
-                "diferenca_dias": diff_dias if pd.notna(ext.get("data")) and pd.notna(raz.get("data")) else None,
+                "diferenca_dias": diff_dias,
                 "diferenca_valor": abs(ext.get("valor", 0) - raz.get("valor", 0)),
                 "similaridade_descricao": round(sim, 2)
             })
@@ -99,20 +100,20 @@ def conciliar(
     total_conc = len(df_conciliados)
     taxa = (total_conc / total_ext * 100) if total_ext > 0 else 0
 
-    resumo = f"""RESUMO DA CONCILIACAO BANCARIA
-================================
-Total de lancamentos no extrato: {total_ext}
-Total de lancamentos no razao:   {total_raz}
-Lancamentos conciliados:         {total_conc}
-Taxa de conciliacao:             {taxa:.1f}%
-Nao conciliados no extrato:      {len(nao_conciliados_extrato)}
-Nao conciliados no razao:        {len(nao_conciliados_razao)}
-Divergencias detectadas:         {len(divergencias)}
-
-CRITERIOS UTILIZADOS:
-- Tolerancia de dias: {tolerancia_dias}
-- Tolerancia de valor: R$ {tolerancia_valor:.2f}
-- Similaridade minima: {similaridade_minima:.0%}
-"""
+    resumo = (
+        "RESUMO DA CONCILIACAO BANCARIA\n"
+        "================================\n"
+        f"Total de lancamentos no extrato: {total_ext}\n"
+        f"Total de lancamentos no razao:   {total_raz}\n"
+        f"Lancamentos conciliados:         {total_conc}\n"
+        f"Taxa de conciliacao:             {taxa:.1f}%\n"
+        f"Nao conciliados no extrato:      {len(nao_conciliados_extrato)}\n"
+        f"Nao conciliados no razao:        {len(nao_conciliados_razao)}\n"
+        f"Divergencias detectadas:         {len(divergencias)}\n\n"
+        f"CRITERIOS UTILIZADOS:\n"
+        f"- Tolerancia de dias: {tolerancia_dias}\n"
+        f"- Tolerancia de valor: R$ {tolerancia_valor:.2f}\n"
+        f"- Similaridade minima: {similaridade_minima:.0%}\n"
+    )
 
     return df_conciliados, nao_conciliados_extrato, nao_conciliados_razao, divergencias, resumo
