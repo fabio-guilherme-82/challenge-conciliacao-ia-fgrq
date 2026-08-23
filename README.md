@@ -1,154 +1,138 @@
-# Alura Agent - Conciliacao Bancaria com IA
+# Alura Agent · Conciliação bancária com IA
 
-> **Challenge Oracle + Alura (ONE AI For Tech) - G10 Brasil**
+<div align="center">
 
-O **Alura Agent** e um agente de inteligencia artificial especializado em **conciliacao bancaria**. Ele compara automaticamente o **extrato bancario** (fornecido pelo banco em PDF ou CSV) com o **livro razao** (lancamentos contabeis da empresa em CSV), identifica correspondencias, detecta divergencias e responde perguntas em **linguagem natural** sobre os dados financeiros.
+**Transforme arquivos financeiros em decisões mais rápidas e confiáveis.**
 
-Este projeto foi desenvolvido como solucao pratica para o desafio do programa **Alura-Oracle ONE G10**, aplicando o conceito de **RAG (Retrieval-Augmented Generation)** a um problema real do dia a dia contabil.
+Compare extratos bancários com o livro razão, encontre divergências e converse com os dados usando linguagem natural.
 
----
+[![Abrir aplicação](https://img.shields.io/badge/abrir-aplicação-0f766e?style=for-the-badge)](https://challenge-conciliacao-ia-fgrq-tvcazycfy6ioyq8dtglgjx.streamlit.app)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-3776ab?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-app-ff4b4b?style=for-the-badge&logo=streamlit&logoColor=white)](https://streamlit.io/)
 
-## Aplicacao Online (Deploy)
+**Challenge Oracle + Alura · ONE AI for Tech · G10 Brasil**
 
-Acesse a aplicacao em funcionamento:
-👉 **[Alura Agent - Streamlit Community Cloud](https://challenge-conciliacao-ia-fgrq-tvcazycfy6ioyq8dtglgjx.streamlit.app)**
+</div>
 
----
+> **Demo online:** [abrir o Alura Agent no Streamlit Community Cloud](https://challenge-conciliacao-ia-fgrq-tvcazycfy6ioyq8dtglgjx.streamlit.app)
 
-## Descricao do Projeto
+## Índice
 
-O Alura Agent e um sistema **RAG (Retrieval-Augmented Generation)** que combina:
+- [Visão geral](#visão-geral)
+- [O que a aplicação faz](#o-que-a-aplicação-faz)
+- [Como funciona](#como-funciona)
+- [Comece em poucos minutos](#comece-em-poucos-minutos)
+- [Arquivos de entrada](#arquivos-de-entrada)
+- [Pergunte aos dados](#pergunte-aos-dados)
+- [Estrutura do projeto](#estrutura-do-projeto)
+- [Configurações](#configurações)
 
-1. **Ingestao de dados:** Leitura de arquivos PDF e CSV de extrato bancario, e CSV de livro razao
-2. **Normalizacao:** Padronizacao automatica de colunas (data, valor, descricao, tipo, etc.)
-3. **Extracao de PDF:** Extrai texto de extratos bancarios em PDF e tenta identificar tabelas de lancamentos
-4. **Conciliacao:** Algoritmo de matching que compara lancamentos por valor, data (com tolerancia) e similaridade textual
-5. **Vetorizacao:** Conversao dos dados em embeddings semanticos via Google Gemini
-6. **Consulta inteligente:** Respostas geradas pelo LLM Gemini 1.5 Flash baseadas exclusivamente nos documentos carregados
+## Visão geral
 
-O objetivo e reduzir o tempo gasto na conciliacao manual, identificar erros contabeis e fornecer insights financeiros via chat em linguagem natural.
+O **Alura Agent** aplica RAG (*Retrieval-Augmented Generation*) à conciliação bancária. A aplicação recebe um extrato bancário em PDF ou CSV e um livro razão em CSV, normaliza os dados, cruza os lançamentos e apresenta os resultados em uma interface Streamlit.
 
----
+O resultado é uma visão prática do que foi conciliado, do que está pendente e de onde existem diferenças de data, valor ou descrição. Depois, o agente Gemini permite investigar esses dados em um chat, sempre usando os documentos carregados como contexto.
 
-## Arquitetura da Solucao
+## O que a aplicação faz
 
+| Etapa | Resultado |
+| --- | --- |
+| **Importa** | Lê extratos em PDF/CSV e livros razão em CSV. |
+| **Entende** | Detecta variações de nomes de colunas e normaliza os registros. |
+| **Concilia** | Compara data, valor e similaridade da descrição com tolerâncias configuráveis. |
+| **Explica** | Organiza conciliados, pendências e divergências em tabelas. |
+| **Responde** | Usa embeddings e o Gemini para responder perguntas sobre os documentos. |
+
+## Como funciona
+
+```mermaid
+flowchart LR
+    A[Extrato PDF ou CSV] --> C[Document loader]
+    B[Livro razão CSV] --> C
+    C --> D[Normalização]
+    D --> E[Conciliador]
+    E --> F[Resultados]
+    D --> G[Embeddings Gemini]
+    G --> H[(ChromaDB)]
+    H --> I[Contexto relevante]
+    I --> J[Gemini 1.5 Flash]
+    J --> K[Chat no Streamlit]
 ```
-[Extrato Bancario PDF/CSV] ---|
-                              |---> [Document Loader] ---> [Normalizacao de Dados]
-[Livro Razao CSV] ------------|                              |
-                                                             v
-                                                   [Conciliador (Regras de Negocio)]
-                                                             |
-              [Interface Streamlit] <--- [LLM Gemini 1.5 Flash] <--- [Contexto] <--- [ChromaDB VectorStore]
-                                                             ^
-                                                   [Google Gemini Embeddings]
-```
 
-### Fluxo de dados:
-1. **Upload:** O usuario envia o extrato (PDF ou CSV) e o livro razao (CSV)
-2. **Parsing:** Para PDF, extrai o texto e tenta identificar lancamentos. Para CSV, converte cada linha em documento
-3. **Conciliacao:** O algoritmo cruza lancamentos por valor, data e descricao
-4. **Embeddings:** Google `gemini-embedding-001` converte texto em vetores semanticos
-5. **Armazenamento:** ChromaDB indexa os vetores para busca rapida
-6. **Resposta:** O modelo Gemini responde perguntas baseadas apenas nos documentos carregados
+**Fluxo de uso:** faça o upload dos dois arquivos, ajuste as tolerâncias na barra lateral, execute a conciliação e abra a aba de resultados ou o chat.
 
----
+## Tecnologias
 
-## Tecnologias e Ferramentas Utilizadas
+`Python` · `Streamlit` · `Pandas` · `PyPDF` · `ChromaDB` · `LangChain` · `Google Gemini`
 
-| Camada | Tecnologia | Finalidade |
-|--------|-----------|------------|
-| **Interface** | Streamlit | Aplicacao web interativa |
-| **Processamento** | Pandas | Manipulacao e normalizacao de dados |
-| **Leitura PDF** | PyPDF | Extracao de texto de extratos bancarios em PDF |
-| **Embeddings** | Google Gemini Embedding API | Vetorizacao semantica do texto |
-| **Vector DB** | ChromaDB | Armazenamento e busca vetorial |
-| **LLM** | Google Gemini 1.5 Flash | Geracao de respostas naturais |
-| **Framework IA** | LangChain (core + community) | Documentos e Vector Store |
-| **Leitura CSV** | Pandas | Parsing de arquivos CSV |
-| **Hospedagem** | Streamlit Community Cloud | Deploy na nuvem |
+| Tecnologia | Papel no projeto |
+| --- | --- |
+| Streamlit | Interface web interativa |
+| Pandas | Leitura, transformação e análise dos dados |
+| PyPDF | Extração de texto de extratos em PDF |
+| ChromaDB | Armazenamento e busca vetorial |
+| Gemini Embeddings | Representação semântica dos documentos |
+| Gemini 1.5 Flash | Respostas em linguagem natural |
 
----
+## Comece em poucos minutos
 
-## Como Executar o Projeto
+### Pré-requisitos
 
-### Prerequisitos
 - Python 3.10 ou superior
-- Chave de API do Google Gemini (obtenha gratuitamente em [aistudio.google.com](https://aistudio.google.com))
+- Uma chave de API do [Google AI Studio](https://aistudio.google.com/)
 
-### Passo a passo
+### Instalação
 
-1. **Clone o repositorio:**
-   ```bash
-   git clone https://github.com/fabio-guilherme-82/challenge-conciliacao-ia-fgrq.git
-   cd challenge-conciliacao-ia-fgrq
-   ```
-
-2. **Crie o ambiente virtual:**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # Linux/Mac
-   venv\Scripts\activate   # Windows
-   ```
-
-3. **Instale as dependencias:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Configure a API Key:**
-
-   Copie o arquivo de exemplo:
-   ```bash
-   cp .env.example .env
-   ```
-
-   Edite o arquivo `.env` e insira sua chave:
-   ```env
-   GOOGLE_API_KEY=sua_chave_aqui
-   ```
-
-   > **Para deploy no Streamlit Cloud:** Configure a secret em **Settings -> Secrets**:
-   > ```toml
-   > GOOGLE_API_KEY = "sua_chave_aqui"
-   > ```
-
-5. **Execute a aplicacao:**
-   ```bash
-   streamlit run app.py
-   ```
-
-6. **Acesse no navegador:**
-   ```
-   http://localhost:8501
-   ```
-
----
-
-## Estrutura dos Arquivos de Entrada
-
-### Extrato Bancario (PDF ou CSV)
-
-#### Opcao 1: PDF
-O sistema aceita extratos bancarios em PDF. Ele extrai o texto do PDF e tenta identificar automaticamente as linhas de lancamento no formato:
-```
-DD/MM/AAAA DESCRICAO DO LANCAMENTO VALOR SALDO
+```bash
+git clone https://github.com/fabio-guilherme-82/challenge-conciliacao-ia-fgrq.git
+cd challenge-conciliacao-ia-fgrq
+python -m venv venv
 ```
 
-**Dica:** O algoritmo de extracao funciona melhor com PDFs que tenham o texto selecionavel (nao imagens escaneadas).
+Ative o ambiente virtual e instale as dependências:
 
-#### Opcao 2: CSV
-O arquivo deve conter as colunas (nomes flexiveis, o sistema detecta automaticamente):
+```bash
+# Windows PowerShell
+.\venv\Scripts\Activate.ps1
 
-| Coluna esperada | Variacoes aceitas |
-|-----------------|-------------------|
-| `data` | data, date, dt, data_mov, data_transacao |
-| `descricao` | descricao, historico, desc, detalhe |
-| `valor` | valor, vlr, amount, val |
-| `tipo` | tipo, natureza, operacao, debito_credito, dc |
-| `saldo` | saldo, saldo_atual, balance |
+# Linux/macOS
+source venv/bin/activate
 
-**Exemplo de linha:**
+pip install -r requirements.txt
+```
+
+Configure a chave no ambiente antes de iniciar:
+
+```bash
+# Windows PowerShell
+$env:GOOGLE_API_KEY="sua_chave_aqui"
+
+# Linux/macOS
+export GOOGLE_API_KEY="sua_chave_aqui"
+```
+
+Execute a aplicação:
+
+```bash
+streamlit run app.py
+```
+
+Acesse `http://localhost:8501` no navegador. No Streamlit Cloud, configure `GOOGLE_API_KEY` em **Settings → Secrets**.
+
+## Arquivos de entrada
+
+### Extrato bancário
+
+Aceita **PDF com texto selecionável** ou CSV. Para CSV, as colunas podem usar nomes equivalentes:
+
+| Campo | Variações reconhecidas |
+| --- | --- |
+| Data | `data`, `date`, `dt`, `data_mov`, `data_transacao` |
+| Descrição | `descricao`, `historico`, `desc`, `detalhe` |
+| Valor | `valor`, `vlr`, `amount`, `val` |
+| Tipo | `tipo`, `natureza`, `operacao`, `debito_credito`, `dc` |
+| Saldo | `saldo`, `saldo_atual`, `balance` |
+
 ```csv
 data,descricao,valor,tipo,saldo
 01/08/2026,SALDO ANTERIOR,0.00,,15000.00
@@ -156,141 +140,64 @@ data,descricao,valor,tipo,saldo
 03/08/2026,RECEBIMENTO CLIENTE XYZ,3200.00,C,15700.00
 ```
 
-### Livro Razao (CSV)
-O arquivo deve conter as colunas (nomes flexiveis):
+### Livro razão
 
-| Coluna esperada | Variacoes aceitas |
-|-----------------|-------------------|
-| `data` | data, date, data_lancamento |
-| `descricao` | descricao, historico |
-| `valor` | valor, vlr |
-| `conta` | conta, conta_contabil, codigo_conta |
-| `documento` | documento, doc, numero_documento |
-| `tipo` | tipo, dc, debito_credito |
+O CSV deve conter data, descrição e valor. `conta`, `documento` e `tipo` também são reconhecidos quando presentes.
 
-**Exemplo de linha:**
 ```csv
 data,descricao,valor,conta,documento,tipo
 02/08/2026,PAGTO FORNECEDOR ABC,2500.00,21101,001234,D
 03/08/2026,REC CLIENTE XYZ,3200.00,11201,005678,C
 ```
 
----
+Os arquivos prontos para teste estão em [`data/`](data/): `extrato_bancario_exemplo.csv` e `livro_razao_exemplo.csv`.
 
-## Exemplos de Perguntas que o Agente Responde
+## Pergunte aos dados
 
-> Apos fazer o upload do extrato e do livro razao, voce pode conversar com o agente na aba **"💬 Perguntar ao Agente"**.
+Depois da conciliação, experimente perguntas como:
 
-### Sobre conciliacao
-- "Qual a taxa de conciliacao deste mes?"
-- "Quais lancamentos do extrato nao foram conciliados?"
-- "Quais lancamentos do razao nao aparecem no extrato?"
+- **Conciliação:** “Qual a taxa de conciliação deste mês?”
+- **Pendências:** “Quais lançamentos do extrato não foram conciliados?”
+- **Valores:** “Qual o saldo final do extrato bancário?”
+- **Divergências:** “Há diferenças de valor entre extrato e razão?”
+- **Análise:** “Resuma os principais pontos de atenção desta conciliação.”
 
-### Sobre valores e saldos
-- "Qual o saldo final do extrato bancario?"
-- "Qual o total de tarifas bancarias no periodo?"
-- "Qual o valor total dos lancamentos de credito?"
+## Estrutura do projeto
 
-### Sobre divergencias
-- "Existem lancamentos conciliados com diferenca de data?"
-- "Ha divergencias de valor entre extrato e razao?"
-- "Quais lancamentos tem descricoes similares mas valores diferentes?"
-
-### Sobre analise contabil
-- "Resuma os principais pontos de atencao desta conciliacao."
-- "O extrato esta equilibrado com o razao?"
-- "Quais documentos do razao estao pendentes de compensacao bancaria?"
-
----
-
-## Exemplos de Respostas Geradas pelo Agente
-
-### Exemplo 1 - Taxa de conciliacao
-> **Pergunta:** "Qual a taxa de conciliacao?"
->
-> **Resposta:** A taxa de conciliacao entre o extrato bancario e o livro razao e de **87,5%**. Foram encontrados 35 lancamentos conciliados de um total de 40 no extrato. Ha 5 lancamentos no extrato e 3 no razao sem correspondencia.
-
-### Exemplo 2 - Nao conciliados
-> **Pergunta:** "Quais lancamentos do extrato nao foram conciliados?"
->
-> **Resposta:** Os seguintes lancamentos do extrato nao possuem correspondencia no livro razao:
-> - 15/08/2026 | TARIFA BANCARIA MENSAL | R$ 45,90 | DEBITO
-> - 18/08/2026 | TRANSFERENCIA PIX - FORNECEDOR X | R$ 1.250,00 | DEBITO
-> - 22/08/2026 | DEPOSITO EM DINHEIRO | R$ 500,00 | CREDITO
->
-> Recomendo verificar se os lancamentos contabeis foram registrados com datas ou descricoes diferentes.
-
-### Exemplo 3 - Divergencias
-> **Pergunta:** "Ha divergencias de valor?"
->
-> **Resposta:** Sim, identifiquei **2 ocorrencias** de divergencia de valor nos lancamentos conciliados:
-> - PAGAMENTO DE ENERGIA ELETRICA: extrato R$ 1.234,56 vs razao R$ 1.230,00 (diferenca de R$ 4,56)
-> - REEMBOLSO DE DESPESAS: extrato R$ 350,00 vs razao R$ 35,00 (diferenca de R$ 315,00 - possivel erro de digitacao)
-
----
-
-## Estrutura do Repositorio
-
-```
+```text
 challenge-conciliacao-ia-fgrq/
 ├── app.py                 # Interface Streamlit
-├── agent.py               # Motor RAG (Gemini direto + ChromaDB)
-├── document_loader.py     # Carrega e normaliza CSVs e PDFs
-├── conciliador.py         # Logica de matching e divergencias
-├── requirements.txt       # Dependencias do projeto
-├── README.md              # Documentacao completa
-├── .env.example           # Exemplo de variaveis de ambiente
-└── .streamlit/            # Configuracoes do Streamlit (opcional)
-    └── config.toml
+├── agent.py               # RAG com Gemini e ChromaDB
+├── document_loader.py     # Leitura e normalização de PDFs/CSVs
+├── conciliador.py         # Matching e detecção de divergências
+├── data/                  # Arquivos CSV de exemplo
+├── requirements.txt       # Dependências
+└── README.md              # Documentação
 ```
 
----
+## Configurações
 
-## Deploy na Nuvem
+Na barra lateral, ajuste os parâmetros que controlam o matching:
 
-A aplicacao esta implantada no **Streamlit Community Cloud**.
+| Parâmetro | Padrão | O que controla |
+| --- | ---: | --- |
+| Tolerância de dias | `3` | Diferença máxima entre as datas |
+| Tolerância de valor | `R$ 0,01` | Diferença máxima aceitável nos valores |
+| Similaridade mínima | `0,4` | Semelhança mínima entre descrições, de 0 a 1 |
 
-**Link publico:** [challenge-conciliacao-ia-fgrq-tvcazycfy6ioyq8dtglgjx.streamlit.app](https://challenge-conciliacao-ia-fgrq-tvcazycfy6ioyq8dtglgjx.streamlit.app)
+## Deploy
 
-### Como fazer o deploy
-1. Conecte seu repositorio GitHub ao [Streamlit Cloud](https://streamlit.io/cloud)
-2. Selecione o repositorio `challenge-conciliacao-ia-fgrq`
-3. Configure a secret `GOOGLE_API_KEY` em **Settings -> Secrets**
-4. Clique em **Deploy**
+A aplicação está publicada no **Streamlit Community Cloud**. Para criar seu próprio deploy:
 
----
+1. Conecte o repositório ao [Streamlit Cloud](https://streamlit.io/cloud).
+2. Selecione `app.py` como arquivo principal.
+3. Configure `GOOGLE_API_KEY` em **Settings → Secrets**.
+4. Publique a aplicação.
 
-## Configuracoes de Conciliacao
+## Licença e autoria
 
-Na barra lateral da aplicacao, voce pode ajustar os parametros do algoritmo:
+Projeto educacional desenvolvido para o **Challenge Alura-Oracle ONE G10**.
 
-| Parametro | Padrao | Descricao |
-|-----------|--------|-----------|
-| **Tolerancia de dias** | 3 | Diferenca maxima de data entre extrato e razao |
-| **Tolerancia de valor** | R$ 0,01 | Diferenca maxima de valor aceitavel |
-| **Similaridade minima** | 0,4 | Similaridade textual minima entre descricoes (0 a 1) |
+**Fabio Guilherme** · [GitHub](https://github.com/fabio-guilherme-82)
 
----
-
-## Testes e Validacao
-
-O sistema foi testado com:
-- Extratos bancarios em PDF (texto selecionavel)
-- Extratos bancarios em CSV
-- Livros razao de pequenas e medias empresas
-- Diferentes padroes de nomenclatura de colunas
-- Valores com formatacao brasileira (R$, virgula decimal)
-
----
-
-## Licenca
-
-Este projeto foi desenvolvido para fins educacionais no programa **Alura-Oracle ONE G10**.
-
----
-
-## Autor
-
-**Fabio Guilherme** - [GitHub](https://github.com/fabio-guilherme-82)
-
-> "Automatizando a contabilidade com inteligencia artificial."
+> Automatizando a contabilidade com inteligência artificial.
