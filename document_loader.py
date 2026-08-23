@@ -1,86 +1,9 @@
-"""Carrega e processa documentos de conciliação bancária."""
+"""Carrega e processa documentos de conciliacao bancaria."""
 import os
 from typing import List, Tuple
 
-# --- Tenta importar Document do LangChain ---
-try:
-    from langchain_core.documents import Document
-    LANGCHAIN_DOC = True
-except Exception:
-    LANGCHAIN_DOC = False
-    # Classe Document simples para fallback
-    class Document:
-        def __init__(self, page_content: str, metadata: dict = None):
-            self.page_content = page_content
-            self.metadata = metadata or {}
-
-try:
-    from langchain_community.document_loaders import PyPDFLoader
-    LANGCHAIN_PDF = True
-except Exception:
-    LANGCHAIN_PDF = False
-
+from langchain_core.documents import Document
 import pandas as pd
-
-
-def load_pdf(file_path: str) -> List[Document]:
-    """Carrega um PDF e retorna lista de Document."""
-    if LANGCHAIN_PDF:
-        loader = PyPDFLoader(file_path)
-        documents = loader.load()
-        for doc in documents:
-            doc.metadata["source_type"] = "pdf"
-            doc.metadata["file_name"] = os.path.basename(file_path)
-        return documents
-    else:
-        # Fallback simples: lê PDF como texto (requer pypdf)
-        try:
-            from pypdf import PdfReader
-            reader = PdfReader(file_path)
-            text = ""
-            for page in reader.pages:
-                text += page.extract_text() or ""
-            return [Document(
-                page_content=text,
-                metadata={"source_type": "pdf", "file_name": os.path.basename(file_path)}
-            )]
-        except Exception as e:
-            raise ImportError(f"Não foi possível ler o PDF. Instale pypdf ou langchain-community. Erro: {e}")
-
-
-def load_csv(file_path: str, doc_type: str = "generico") -> List[Document]:
-    """Carrega um CSV e converte cada linha em um Document."""
-    df = pd.read_csv(file_path)
-    documents = []
-    file_name = os.path.basename(file_path)
-
-    for idx, row in df.iterrows():
-        parts = [f"{col}: {val}" for col, val in row.items() if pd.notna(val)]
-        page_content = " | ".join(parts)
-
-        doc = Document(
-            page_content=page_content,
-            metadata={
-                "source_type": "csv",
-                "doc_type": doc_type,
-                "file_name": file_name,
-                "row_index": idx
-            }
-        )
-        documents.append(doc)
-
-    return documents
-
-
-def load_document(file_path: str, doc_type: str = "generico") -> List[Document]:
-    """Detecta o tipo de arquivo e carrega adequadamente."""
-    ext = os.path.splitext(file_path)[1].lower()
-    if ext == ".pdf":
-        return load_pdf(file_path)
-    elif ext == ".csv":
-        return load_csv(file_path, doc_type=doc_type)
-    else:
-        raise ValueError(f"Formato não suportado: {ext}. Use PDF ou CSV.")
 
 
 def _normalizar_dataframe(df: pd.DataFrame, tipo: str) -> pd.DataFrame:
@@ -111,7 +34,14 @@ def _normalizar_dataframe(df: pd.DataFrame, tipo: str) -> pd.DataFrame:
         df["data"] = pd.to_datetime(df["data"], dayfirst=True, errors="coerce")
 
     if "valor" in df.columns:
-        df["valor"] = df["valor"].astype(str).str.replace("R$", "", regex=False).str.replace(".", "", regex=False).str.replace(",", ".", regex=False).astype(float)
+        df["valor"] = (
+            df["valor"]
+            .astype(str)
+            .str.replace("R$", "", regex=False)
+            .str.replace(".", "", regex=False)
+            .str.replace(",", ".", regex=False)
+            .astype(float)
+        )
 
     if "tipo" in df.columns:
         df["tipo"] = df["tipo"].astype(str).str.strip().str.upper()
@@ -123,17 +53,42 @@ def _normalizar_dataframe(df: pd.DataFrame, tipo: str) -> pd.DataFrame:
     return df
 
 
+def csv_para_documentos(file_path: str, doc_type: str) -> List[Document]:
+    """Converte cada linha do CSV em um Document LangChain."""
+    df = pd.read_csv(file_path)
+    df = _normalizar_dataframe(df, doc_type)
+    file_name = os.path.basename(file_path)
+    documents = []
+
+    for idx, row in df.iterrows():
+        partes = [f"{col}: {val}" for col, val in row.items() if pd.notna(val)]
+        page_content = " | ".join(partes)
+
+        doc = Document(
+            page_content=page_content,
+            metadata={
+                "source_type": "csv",
+                "doc_type": doc_type,
+                "file_name": file_name,
+                "row_index": idx
+            }
+        )
+        documents.append(doc)
+
+    return documents
+
+
 def load_extrato_bancario(file_path: str) -> Tuple[pd.DataFrame, List[Document]]:
-    """Carrega extrato bancário e retorna DataFrame + Documentos."""
+    """Carrega extrato bancario e retorna DataFrame + Documentos."""
     df = pd.read_csv(file_path)
     df = _normalizar_dataframe(df, "extrato")
-    docs = load_document(file_path, doc_type="extrato_bancario")
+    docs = csv_para_documentos(file_path, "extrato_bancario")
     return df, docs
 
 
 def load_livro_razao(file_path: str) -> Tuple[pd.DataFrame, List[Document]]:
-    """Carrega livro razão/lançamentos contábeis e retorna DataFrame + Documentos."""
+    """Carrega livro razao e retorna DataFrame + Documentos."""
     df = pd.read_csv(file_path)
     df = _normalizar_dataframe(df, "razao")
-    docs = load_document(file_path, doc_type="livro_razao")
+    docs = csv_para_documentos(file_path, "livro_razao")
     return df, docs
