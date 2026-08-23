@@ -96,14 +96,8 @@ def ask_question(question: str, resumo_conciliacao: str = "") -> Dict[str, Any]:
             "Voce e um assistente contabil especializado em conciliacao bancaria. "
             "Responda em portugues, com valores em R$. "
             "Se nao souber a resposta, diga que nao encontrou nos documentos. "
-            "
-
-RESUMO DA CONCILIACAO:
-{resumo}
-
-"
-            "Contexto dos documentos:
-{context}"
+            "\n\nRESUMO DA CONCILIACAO:\n{resumo}\n\n"
+            "Contexto dos documentos:\n{context}"
         )),
         ("human", "{input}")
     ])
