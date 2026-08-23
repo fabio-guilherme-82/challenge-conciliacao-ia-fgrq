@@ -14,7 +14,7 @@ EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 LLM_MODEL = "gemini-1.5-flash"
 
 
-def _get_api_key() -> str:
+def _get_api_key():
     try:
         import streamlit as st
         key = st.secrets.get("GOOGLE_API_KEY")
@@ -33,15 +33,7 @@ def _get_api_key() -> str:
     if key:
         return key
 
-    raise ValueError(
-        "GOOGLE_API_KEY não encontrada. Configure em:
-"
-        "  • Streamlit Cloud: Advanced Settings > Secrets
-"
-        "  • Local: arquivo .env
-"
-        "  • OCI: variável de ambiente"
-    )
+    raise ValueError("GOOGLE_API_KEY nao encontrada.")
 
 
 def get_embeddings():
@@ -58,7 +50,7 @@ def get_llm():
     )
 
 
-def build_vector_store(documents: List[Document]) -> Chroma:
+def build_vector_store(documents):
     embeddings = get_embeddings()
     if os.path.exists(CHROMA_PERSIST_DIR):
         import shutil
@@ -72,7 +64,7 @@ def build_vector_store(documents: List[Document]) -> Chroma:
     return vector_store
 
 
-def load_existing_vector_store() -> Optional[Chroma]:
+def load_existing_vector_store():
     if not os.path.exists(CHROMA_PERSIST_DIR):
         return None
     embeddings = get_embeddings()
@@ -82,37 +74,35 @@ def load_existing_vector_store() -> Optional[Chroma]:
     )
 
 
-def create_qa_chain(vector_store: Chroma, resumo_conciliacao: str = ""):
+def create_qa_chain(vector_store, resumo_conciliacao=""):
     llm = get_llm()
     retriever = vector_store.as_retriever(
         search_type="similarity",
         search_kwargs={"k": 8}
     )
 
-    prompt_template = f"""Você é um assistente contábil especializado em conciliação bancária. Sua função é analisar documentos financeiros e responder perguntas com precisão.
-
-RESUMO DA CONCILIAÇÃO REALIZADA:
-{{resumo_conciliacao}}
-
-Contexto dos documentos (extrato bancário e livro razão):
-{{context}}
-
-Pergunta do usuário: {{question}}
-
-Instruções:
-- Responda em português de forma clara, objetiva e profissional.
-- Baseie sua resposta APENAS nos documentos fornecidos e no resumo da conciliação.
-- Para perguntas sobre divergências, cite valores e descrições específicas.
-- Para perguntas sobre saldo, some ou subtraia os valores conforme o tipo (crédito/débito).
-- Se a informação não estiver nos documentos, diga: "Não encontrei essa informação nos documentos fornecidos."
-- Use formatação de moeda brasileira (R$) para valores.
-- Seja conciso mas completo. Evite respostas genéricas.
-
-Resposta:"""
+    prompt_template = (
+        "Voce e um assistente contabil especializado em conciliacao bancaria. "
+        "Sua funcao e analisar documentos financeiros e responder perguntas com precisao.\n\n"
+        "RESUMO DA CONCILIACAO REALIZADA:\n"
+        + resumo_conciliacao + "\n\n"
+        "Contexto dos documentos (extrato bancario e livro razao):\n"
+        "{context}\n\n"
+        "Pergunta do usuario: {question}\n\n"
+        "Instrucoes:\n"
+        "- Responda em portugues de forma clara, objetiva e profissional.\n"
+        "- Baseie sua resposta APENAS nos documentos fornecidos e no resumo da conciliacao.\n"
+        "- Para perguntas sobre divergencias, cite valores e descricoes especificas.\n"
+        "- Para perguntas sobre saldo, some ou subtraia os valores conforme o tipo (credito/debito).\n"
+        "- Se a informacao nao estiver nos documentos, diga: 'Nao encontrei essa informacao nos documentos fornecidos.'\n"
+        "- Use formatacao de moeda brasileira (R$) para valores.\n"
+        "- Seja conciso mas completo. Evite respostas genericas.\n\n"
+        "Resposta:"
+    )
 
     prompt = PromptTemplate(
         template=prompt_template,
-        input_variables=["context", "question", "resumo_conciliacao"]
+        input_variables=["context", "question"]
     )
 
     qa_chain = RetrievalQA.from_chain_type(
@@ -125,13 +115,13 @@ Resposta:"""
     return qa_chain
 
 
-def ask_question(question: str, resumo_conciliacao: str = "") -> dict:
+def ask_question(question, resumo_conciliacao=""):
     vector_store = load_existing_vector_store()
     if vector_store is None:
-        raise ValueError("Nenhum documento foi carregado ainda. Faça o upload primeiro.")
+        raise ValueError("Nenhum documento foi carregado ainda. Faca o upload primeiro.")
 
     qa_chain = create_qa_chain(vector_store, resumo_conciliacao)
-    result = qa_chain.invoke({"query": question, "resumo_conciliacao": resumo_conciliacao})
+    result = qa_chain.invoke({"query": question})
 
     return {
         "answer": result["result"],
