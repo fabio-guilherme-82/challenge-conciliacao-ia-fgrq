@@ -37,6 +37,24 @@ def build_vector_store(documents: List[Document]):
     if os.path.exists(CHROMA_PATH):
         shutil.rmtree(CHROMA_PATH)
 
+    documentos_por_fonte = {}
+    for document in documents:
+        conteudo = document.page_content.strip()
+        if not conteudo:
+            continue
+        chave = document.metadata.get("doc_type", "documentos")
+        documentos_por_fonte.setdefault(chave, []).append(conteudo)
+
+    documentos_indexados = [
+        Document(
+            page_content="\n\n".join(conteudos),
+            metadata={"doc_type": fonte},
+        )
+        for fonte, conteudos in documentos_por_fonte.items()
+    ]
+    if not documentos_indexados:
+        raise ValueError("Nenhum conteúdo válido para gerar embeddings.")
+
     api_key = _get_api_key()
     embeddings = GoogleGenerativeAIEmbeddings(
         model=EMBEDDING_MODEL,
@@ -44,7 +62,7 @@ def build_vector_store(documents: List[Document]):
     )
 
     vectorstore = Chroma.from_documents(
-        documents=documents,
+        documents=documentos_indexados,
         embedding=embeddings,
         persist_directory=CHROMA_PATH
     )
