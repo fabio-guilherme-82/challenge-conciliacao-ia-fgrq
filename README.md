@@ -1,4 +1,4 @@
-# Alura Agent · Conciliação bancária com IA
+# Conciliações Bank F.G.R.Q. · Conciliação bancária com IA
 
 <div align="center">
 
@@ -14,7 +14,7 @@ Compare extratos bancários com o livro razão, encontre divergências e convers
 
 </div>
 
-> **Demo online:** [abrir o Alura Agent no Streamlit Community Cloud](https://challenge-conciliacao-ia-fgrq-tvcazycfy6ioyq8dtglgjx.streamlit.app)
+> **Demo online:** [abrir o Conciliações Bank F.G.R.Q. no Streamlit Community Cloud](https://challenge-conciliacao-ia-fgrq-tvcazycfy6ioyq8dtglgjx.streamlit.app)
 
 ## Índice
 
@@ -29,7 +29,7 @@ Compare extratos bancários com o livro razão, encontre divergências e convers
 
 ## Visão geral
 
-O **Alura Agent** aplica RAG (*Retrieval-Augmented Generation*) à conciliação bancária. A aplicação recebe um extrato bancário em PDF ou CSV e um livro razão em CSV, normaliza os dados, cruza os lançamentos e apresenta os resultados em uma interface Streamlit.
+O **Conciliações Bank F.G.R.Q.** aplica RAG (*Retrieval-Augmented Generation*) à conciliação bancária. A aplicação recebe um extrato bancário em PDF ou CSV e um livro razão em CSV, normaliza os dados, cruza os lançamentos e apresenta os resultados em uma interface Streamlit.
 
 O resultado é uma visão prática do que foi conciliado, do que está pendente e de onde existem diferenças de data, valor ou descrição. Depois, o agente Gemini permite investigar esses dados em um chat, sempre usando os documentos carregados como contexto.
 

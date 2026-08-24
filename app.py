@@ -1,4 +1,4 @@
-"""Alura Agent - Conciliacao Bancaria com IA."""
+"""Conciliações Bank F.G.R.Q. - Conciliacao Bancaria com IA."""
 import os
 import streamlit as st
 from dotenv import load_dotenv
@@ -9,7 +9,7 @@ from agent import build_vector_store, ask_question
 
 # Configuracao da pagina
 st.set_page_config(
-    page_title="Alura Agent | Conciliacao Bancaria",
+    page_title="Conciliações Bank F.G.R.Q. | Conciliação Bancária",
     page_icon="🏦",
     layout="wide"
 )
@@ -42,7 +42,7 @@ with st.sidebar:
     st.markdown("**Autor:** Fabio Guilherme")
 
 # Titulo principal
-st.title("🏦 Alura Agent - Conciliacao Bancaria")
+st.title("🏦 Conciliações Bank F.G.R.Q. - Conciliação Bancária")
 st.markdown("Agente de IA especializado em conciliar extratos bancarios com o livro razao.")
 st.markdown("**Agora com suporte a PDF!**")
 st.markdown("---")
