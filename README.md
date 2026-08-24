@@ -1,7 +1,5 @@
 # Conciliações Bank F.G.R.Q. · Conciliação bancária com IA
 
-<div align="center">
-
 **Transforme arquivos financeiros em decisões mais rápidas e confiáveis.**
 
 Compare extratos bancários com o livro razão, encontre divergências e converse com os dados usando linguagem natural.
@@ -10,9 +8,7 @@ Compare extratos bancários com o livro razão, encontre divergências e convers
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776ab?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-app-ff4b4b?style=for-the-badge&logo=streamlit&logoColor=white)](https://streamlit.io/)
 
-**Challenge Oracle + Alura · ONE AI for Tech · G10 Brasil**
-
-</div>
+Challenge Oracle + Alura · ONE AI for Tech · G10 Brasil
 
 > **Demo online:** [abrir o Conciliações Bank F.G.R.Q. no Streamlit Community Cloud](https://challenge-conciliacao-ia-fgrq-tvcazycfy6ioyq8dtglgjx.streamlit.app)
 
