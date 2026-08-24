@@ -103,18 +103,22 @@ def _normalizar_dataframe(df: pd.DataFrame, tipo: str) -> pd.DataFrame:
         df["data"] = pd.to_datetime(df["data"], dayfirst=True, errors="coerce")
 
     def converter_valores(coluna: pd.Series) -> pd.Series:
-        return pd.to_numeric(
-            coluna.astype(str)
-            .str.replace("R$", "", regex=False)
-            .str.replace(".", "", regex=False)
-            .str.replace(",", ".", regex=False)
-            .str.replace("d", "", case=False, regex=False)
-            .str.strip(),
-            errors="coerce"
-        ).fillna(0.0)
+        def converter(valor):
+            texto = str(valor).replace("R$", "").replace("d", "").strip()
+            if "," in texto and "." in texto:
+                texto = texto.replace(".", "").replace(",", ".")
+            elif "," in texto:
+                texto = texto.replace(",", ".")
+            return texto
+
+        return pd.to_numeric(coluna.map(converter), errors="coerce").fillna(0.0)
 
     if "valor" in df.columns:
         df["valor"] = converter_valores(df["valor"])
+        if "tipo" not in df.columns:
+            df["tipo"] = df["valor"].map(
+                lambda valor: "CREDITO" if valor >= 0 else "DEBITO"
+            )
     elif "debito" in df.columns or "credito" in df.columns:
         debito = converter_valores(df.get("debito", pd.Series(0, index=df.index)))
         credito = converter_valores(df.get("credito", pd.Series(0, index=df.index)))
