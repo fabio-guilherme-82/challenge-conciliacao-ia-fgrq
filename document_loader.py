@@ -1,15 +1,36 @@
 """Carrega e processa documentos de conciliacao bancaria."""
 import os
 import re
+import unicodedata
 from typing import List, Tuple
 
 from langchain_core.documents import Document
 import pandas as pd
 
 
+def _ler_csv(file_path: str) -> pd.DataFrame:
+    """Lê CSVs brasileiros com diferentes codificações e separadores."""
+    ultimo_erro = None
+    for encoding in ("utf-8", "cp1252", "latin-1"):
+        try:
+            return pd.read_csv(file_path, sep=None, engine="python", encoding=encoding)
+        except UnicodeDecodeError as erro:
+            ultimo_erro = erro
+
+    raise ultimo_erro
+
+
+def _sem_acentos(texto: str) -> str:
+    """Remove acentos para permitir reconhecer cabeçalhos brasileiros."""
+    return "".join(
+        caractere for caractere in unicodedata.normalize("NFKD", texto)
+        if not unicodedata.combining(caractere)
+    )
+
+
 def _normalizar_dataframe(df: pd.DataFrame, tipo: str) -> pd.DataFrame:
     """Normaliza colunas e tipos de dados do DataFrame."""
-    df.columns = [c.strip().lower() for c in df.columns]
+    df.columns = [_sem_acentos(str(c).strip().lower()) for c in df.columns]
 
     col_map = {}
     for col in df.columns:
@@ -28,21 +49,37 @@ def _normalizar_dataframe(df: pd.DataFrame, tipo: str) -> pd.DataFrame:
             col_map[col] = "conta"
         elif lc in ["documento", "doc", "numero_documento", "ndoc"]:
             col_map[col] = "documento"
+        elif lc in ["debito", "debitos"]:
+            col_map[col] = "debito"
+        elif lc in ["credito", "creditos"]:
+            col_map[col] = "credito"
 
     df = df.rename(columns=col_map)
 
     if "data" in df.columns:
         df["data"] = pd.to_datetime(df["data"], dayfirst=True, errors="coerce")
 
-    if "valor" in df.columns:
-        df["valor"] = (
-            df["valor"]
-            .astype(str)
+    def converter_valores(coluna: pd.Series) -> pd.Series:
+        return pd.to_numeric(
+            coluna.astype(str)
             .str.replace("R$", "", regex=False)
             .str.replace(".", "", regex=False)
             .str.replace(",", ".", regex=False)
-            .astype(float)
-        )
+            .str.replace("d", "", case=False, regex=False)
+            .str.strip(),
+            errors="coerce"
+        ).fillna(0.0)
+
+    if "valor" in df.columns:
+        df["valor"] = converter_valores(df["valor"])
+    elif "debito" in df.columns or "credito" in df.columns:
+        debito = converter_valores(df.get("debito", pd.Series(0, index=df.index)))
+        credito = converter_valores(df.get("credito", pd.Series(0, index=df.index)))
+        descricoes = df.get("descricao", pd.Series("", index=df.index)).astype(str).str.upper()
+        entradas = descricoes.str.contains("RECEB|RESGATE|DEP DINHEIRO", regex=True)
+        df["valor"] = credito.where(credito.ne(0), debito)
+        df["valor"] = df["valor"].where(entradas, -df["valor"])
+        df["tipo"] = entradas.map({True: "CREDITO", False: "DEBITO"})
 
     if "tipo" in df.columns:
         df["tipo"] = df["tipo"].astype(str).str.strip().str.upper()
@@ -165,7 +202,7 @@ def load_extrato_bancario(file_path: str) -> Tuple[pd.DataFrame, List[Document]]
     if ext == ".pdf":
         return load_pdf_extrato(file_path)
     else:
-        df = pd.read_csv(file_path)
+        df = _ler_csv(file_path)
         df = _normalizar_dataframe(df, "extrato")
         docs = csv_para_documentos(file_path, "extrato_bancario")
         return df, docs
@@ -173,7 +210,7 @@ def load_extrato_bancario(file_path: str) -> Tuple[pd.DataFrame, List[Document]]
 
 def load_livro_razao(file_path: str) -> Tuple[pd.DataFrame, List[Document]]:
     """Carrega livro razao e retorna DataFrame + Documentos."""
-    df = pd.read_csv(file_path)
+    df = _ler_csv(file_path)
     df = _normalizar_dataframe(df, "razao")
     docs = csv_para_documentos(file_path, "livro_razao")
     return df, docs
