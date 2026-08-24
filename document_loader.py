@@ -4,7 +4,7 @@ import re
 import unicodedata
 from typing import List, Tuple
 
-from langchain_core.documents import Document
+from langchain.schema import Document
 import pandas as pd
 
 
