@@ -4,7 +4,7 @@ import re
 import unicodedata
 from typing import List, Tuple
 
-from langchain.schema import Document
+from langchain_core.documents import Document
 import pandas as pd
 
 
@@ -172,7 +172,7 @@ def load_pdf_extrato(file_path: str) -> Tuple[pd.DataFrame, List[Document]]:
 
 def csv_para_documentos(file_path: str, doc_type: str) -> List[Document]:
     """Converte cada linha do CSV em um Document LangChain."""
-    df = pd.read_csv(file_path)
+    df = _ler_csv(file_path)
     df = _normalizar_dataframe(df, doc_type)
     file_name = os.path.basename(file_path)
     documents = []
