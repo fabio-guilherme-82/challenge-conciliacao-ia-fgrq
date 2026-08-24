@@ -40,6 +40,10 @@ def _ler_extrato_csv(file_path: str) -> pd.DataFrame:
         linha = linha + [""] * (4 - len(linha))
         primeiro, segundo, debito, credito = [campo.strip() for campo in linha[:4]]
 
+        if primeiro.lower() == "lançamento":
+            descricao_pendente = ""
+            continue
+
         if primeiro and re.fullmatch(r"\d{2}/\d{2}/\d{4}", primeiro):
             descricao = " ".join(parte for parte in (descricao_pendente, segundo) if parte)
             valor = credito or debito
