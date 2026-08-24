@@ -2,6 +2,7 @@
 import os
 import re
 import unicodedata
+import csv
 from typing import List, Tuple
 
 from langchain_core.documents import Document
@@ -18,6 +19,44 @@ def _ler_csv(file_path: str) -> pd.DataFrame:
             ultimo_erro = erro
 
     raise ultimo_erro
+
+
+def _ler_extrato_csv(file_path: str) -> pd.DataFrame:
+    """Lê CSVs exportados do relatório bancário com linhas quebradas."""
+    with open(file_path, "r", encoding="utf-8-sig", newline="") as arquivo:
+        linhas = list(csv.reader(arquivo))
+
+    inicio = next(
+        (indice for indice, linha in enumerate(linhas)
+         if linha and linha[0].strip().lower() == "lançamento"),
+        None,
+    )
+    if inicio is None:
+        return _ler_csv(file_path)
+
+    registros = []
+    descricao_pendente = ""
+    for linha in linhas[inicio + 1:]:
+        linha = linha + [""] * (4 - len(linha))
+        primeiro, segundo, debito, credito = [campo.strip() for campo in linha[:4]]
+
+        if primeiro and re.fullmatch(r"\d{2}/\d{2}/\d{4}", primeiro):
+            descricao = " ".join(parte for parte in (descricao_pendente, segundo) if parte)
+            valor = credito or debito
+            if valor:
+                registros.append({
+                    "data": primeiro,
+                    "descricao": descricao,
+                    "valor": valor,
+                    "tipo": "CREDITO" if credito else "DEBITO",
+                })
+            descricao_pendente = ""
+        elif segundo:
+            descricao_pendente = " ".join(
+                parte for parte in (descricao_pendente, segundo) if parte
+            )
+
+    return pd.DataFrame(registros)
 
 
 def _sem_acentos(texto: str) -> str:
@@ -170,9 +209,11 @@ def load_pdf_extrato(file_path: str) -> Tuple[pd.DataFrame, List[Document]]:
     return df, docs
 
 
-def csv_para_documentos(file_path: str, doc_type: str) -> List[Document]:
+def csv_para_documentos(
+    file_path: str, doc_type: str, dataframe: pd.DataFrame = None
+) -> List[Document]:
     """Converte cada linha do CSV em um Document LangChain."""
-    df = _ler_csv(file_path)
+    df = dataframe if dataframe is not None else _ler_csv(file_path)
     df = _normalizar_dataframe(df, doc_type)
     file_name = os.path.basename(file_path)
     documents = []
@@ -202,9 +243,9 @@ def load_extrato_bancario(file_path: str) -> Tuple[pd.DataFrame, List[Document]]
     if ext == ".pdf":
         return load_pdf_extrato(file_path)
     else:
-        df = _ler_csv(file_path)
+        df = _ler_extrato_csv(file_path)
         df = _normalizar_dataframe(df, "extrato")
-        docs = csv_para_documentos(file_path, "extrato_bancario")
+        docs = csv_para_documentos(file_path, "extrato_bancario", df)
         return df, docs
 
 
