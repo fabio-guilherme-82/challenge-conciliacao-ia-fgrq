@@ -7,11 +7,9 @@ from langchain_community.vectorstores import Chroma
 from langchain_core.documents import Document
 
 CHROMA_PATH = "./chroma_db"
-LLM_MODEL = "gemini-2.0-flash"
+LLM_MODEL = "gemini-3.6-flash"
 GENERATION_MODELS = [
-    "gemini-2.0-flash",
-    "gemini-2.5-flash",
-    "gemini-1.5-flash",
+    "gemini-3.6-flash",
 ]
 EMBEDDING_MODEL = "models/gemini-embedding-001"
 
