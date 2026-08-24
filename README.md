@@ -45,18 +45,38 @@ O resultado é uma visão prática do que foi conciliado, do que está pendente 
 
 ## Como funciona
 
-```mermaid
-flowchart LR
-    A[Extrato PDF ou CSV] --> C[Document loader]
-    B[Livro razão CSV] --> C
-    C --> D[Normalização]
-    D --> E[Conciliador]
-    E --> F[Resultados]
-    D --> G[Embeddings Gemini]
-    G --> H[(ChromaDB)]
-    H --> I[Contexto relevante]
-    I --> J[Gemini 1.5 Flash]
-    J --> K[Chat no Streamlit]
+```text
+┌─────────────────────┐      ┌───────────────────┐
+│ Extrato PDF ou CSV  │      │ Livro razão CSV   │
+└──────────┬──────────┘      └─────────┬─────────┘
+           └──────────────┬────────────┘
+                          v
+                ┌─────────────────────┐
+                │ Document loader     │
+                │ + normalização      │
+                └──────────┬──────────┘
+                           v
+                ┌─────────────────────┐
+                │ Conciliador         │
+                │ regras de matching  │
+                └───────┬───────┬─────┘
+                        │       │
+                        v       v
+             ┌──────────────┐  ┌──────────────────┐
+             │ Resultados   │  │ Embeddings Gemini│
+             └──────────────┘  └────────┬─────────┘
+                                        v
+                              ┌──────────────────┐
+                              │ ChromaDB         │
+                              └────────┬─────────┘
+                                       v
+                              ┌──────────────────┐
+                              │ Gemini 1.5 Flash │
+                              └────────┬─────────┘
+                                       v
+                              ┌──────────────────┐
+                              │ Chat Streamlit   │
+                              └──────────────────┘
 ```
 
 **Fluxo de uso:** faça o upload dos dois arquivos, ajuste as tolerâncias na barra lateral, execute a conciliação e abra a aba de resultados ou o chat.
